@@ -28,18 +28,37 @@ def update_csv(Id, name):
     df.to_csv(csv_file, index=False)
 
 def getImagesAndLabels(path):
-    imagePaths = [os.path.join(path, f) for f in os.listdir(path) if f.endswith('.jpg')]
+    print(f"Đang tìm kiếm ảnh trong: {path}")
     faces = []
     Ids = []
-    for imagePath in imagePaths:
-        try:
-            pilImage = Image.open(imagePath).convert('L')
-            imageNp = np.array(pilImage, 'uint8')
-            Id = int(os.path.split(imagePath)[-1].split(".")[1])
-            faces.append(imageNp)
-            Ids.append(Id)
-        except Exception as e:
-            print(f"Lỗi khi đọc ảnh {imagePath}: {e}")
+    
+    for root, dirs, files in os.walk(path):
+        for file in files:
+            if file.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif')):
+                imagePath = os.path.join(root, file)
+                print(f"Đang xử lý ảnh: {imagePath}")
+                try:
+                    pilImage = Image.open(imagePath).convert('L')
+                    imageNp = np.array(pilImage, 'uint8')
+                    
+                    # Resize image to a fixed size (e.g., 100x100)
+                    imageNp = cv2.resize(imageNp, (100, 100))
+                    
+                    # Thử lấy ID từ tên file trước
+                    try:
+                        Id = int(os.path.splitext(file)[0].split(".")[-2])
+                    except:
+                        # Nếu không thành công, lấy ID từ tên thư mục cha
+                        Id = int(os.path.basename(root).split('_')[-1])
+                    
+                    faces.append(imageNp)
+                    Ids.append(Id)
+                    print(f"Đã xử lý thành công ảnh với ID: {Id}")
+                except Exception as e:
+                    print(f"Lỗi khi xử lý ảnh {imagePath}: {e}")
+    
+    print(f"Tổng số khuôn mặt tìm thấy: {len(faces)}")
+    print(f"Tổng số ID tìm thấy: {len(Ids)}")
     return faces, Ids
 
 def delete_user(Id):
@@ -86,17 +105,29 @@ def train_lbph(faces, labels):
         return None
 
 def train_eigenfaces(faces, labels):
-    pca = PCA(n_components=100)
-    faces_pca = pca.fit_transform(np.array(faces).reshape(len(faces), -1))
+    # Ensure all faces are the same size and flatten them
+    faces_flat = [face.flatten() for face in faces]
+    faces_array = np.array(faces_flat)
+
+    print(f"Shape of faces array: {faces_array.shape}")
+
+    pca = PCA(n_components=min(100, len(faces_array) - 1))
+    faces_pca = pca.fit_transform(faces_array)
     recognizer = cv2.face.EigenFaceRecognizer_create()
-    recognizer.train(faces_pca, np.array(labels))
+    recognizer.train(faces_pca.astype(np.float32), np.array(labels))
     return recognizer, pca
 
 def train_fisherfaces(faces, labels):
-    lda = LDA(n_components=100)
-    faces_lda = lda.fit_transform(np.array(faces).reshape(len(faces), -1), labels)
+    # Ensure all faces are the same size and flatten them
+    faces_flat = [face.flatten() for face in faces]
+    faces_array = np.array(faces_flat)
+
+    print(f"Shape of faces array: {faces_array.shape}")
+
+    lda = LDA(n_components=min(100, len(np.unique(labels)) - 1))
+    faces_lda = lda.fit_transform(faces_array, labels)
     recognizer = cv2.face.FisherFaceRecognizer_create()
-    recognizer.train(faces_lda, np.array(labels))
+    recognizer.train(faces_lda.astype(np.float32), np.array(labels))
     return recognizer, lda
 
 def train_cnn(faces, labels):
@@ -163,10 +194,18 @@ def train_model():
         return "Huấn luyện thất bại: Lỗi khi huấn luyện LBPH"
     
     print("Đang huấn luyện mô hình Eigenfaces...")
-    eigenfaces_model, pca = train_eigenfaces(faces, labels)
+    try:
+        eigenfaces_model, pca = train_eigenfaces(faces, labels)
+    except Exception as e:
+        print(f"Lỗi khi huấn luyện Eigenfaces: {e}")
+        return "Huấn luyện thất bại: Lỗi khi huấn luyện Eigenfaces"
     
     print("Đang huấn luyện mô hình Fisherfaces...")
-    fisherfaces_model, lda = train_fisherfaces(faces, labels)
+    try:
+        fisherfaces_model, lda = train_fisherfaces(faces, labels)
+    except Exception as e:
+        print(f"Lỗi khi huấn luyện Fisherfaces: {e}")
+        return "Huấn luyện thất bại: Lỗi khi huấn luyện Fisherfaces"
     
     print("Đang huấn luyện mô hình CNN...")
     cnn_descriptors, cnn_labels = train_cnn(faces, labels)
@@ -221,7 +260,6 @@ def recognize_face(image, models):
     best_conf = min(all_confs)
     
     return best_id, best_conf
-
 
 def recognize_faces():
     print("Đang đọc file CSV...")

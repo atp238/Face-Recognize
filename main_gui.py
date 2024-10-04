@@ -56,16 +56,21 @@ class FaceRecognitionApp:
         self.clearButton2.place(x=1000, y=312)
 
         self.takeImg = tk.Button(window, text="Chụp ảnh", command=self.TakeImages, fg="steel blue", bg="OliveDrab1", width=20, height=2, activebackground="white", font=('times', 15, ' bold '))
-        self.takeImg.place(x=200, y=550)
+        self.takeImg.place(x=50, y=550)
 
         self.trainImg = tk.Button(window, text="Train ảnh", command=self.TrainImages, fg="steel blue", bg="OliveDrab1", width=20, height=2, activebackground="white", font=('times', 15, ' bold '))
-        self.trainImg.place(x=500, y=550)
+        self.trainImg.place(x=350, y=550)
+        
 
         self.trackImg = tk.Button(window, text="Nhận diện", command=self.TrackImages, fg="steel blue", bg="OliveDrab1", width=20, height=2, activebackground="white", font=('times', 15, ' bold '))
-        self.trackImg.place(x=800, y=550)
+        self.trackImg.place(x=650, y=550)
+
+        self.deleteImg = tk.Button(window, text="Xóa ảnh", command=self.DeleteImages, fg="steel blue", bg="OliveDrab1", width=20, height=2, activebackground="white", font=('times', 15, ' bold '))
+        self.deleteImg.place(x=950, y=550)
 
         self.quitWindow = tk.Button(window, text="Thoát", command=self.window.destroy, fg="steel blue", bg="OliveDrab1", width=20, height=2, activebackground="white", font=('times', 15, ' bold '))
-        self.quitWindow.place(x=1100, y=550)
+        self.quitWindow.place(x=1230, y=550)
+
 
     def clear(self):
         self.txt.delete(0, 'end')
@@ -75,6 +80,12 @@ class FaceRecognitionApp:
     def clear2(self):
         self.txt2.delete(0, 'end')
         res = ""
+        self.message.configure(text=res)
+    
+    def DeleteImages(self):
+        Id = self.txt.get()
+        from capture_images import delete_images
+        res = delete_images(Id)
         self.message.configure(text=res)
 
     def TakeImages(self):
@@ -93,6 +104,9 @@ class FaceRecognitionApp:
             self.message2.configure(text=str(res))
         except Exception as e:
             self.message2.configure(text=f"Error: {str(e)}")
+            
+
+
 
 if __name__ == "__main__":
     root = tk.Tk()

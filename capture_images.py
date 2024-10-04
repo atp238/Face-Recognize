@@ -2,6 +2,7 @@ import cv2
 import os
 import csv
 import unicodedata
+import pandas as pd
 
 def is_number(s):
     try:
@@ -17,6 +18,22 @@ def is_number(s):
         pass
  
     return False
+
+def update_csv(Id, name):
+    csv_file = 'StudentDetails/StudentDetails.csv'
+    df = pd.read_csv(csv_file)
+    
+    # Check if Id already exists
+    if Id in df['Id'].values:
+        # Update the name if Id exists
+        df.loc[df['Id'] == Id, 'Name'] = name
+    else:
+        # Append new row if Id doesn't exist
+        new_row = pd.DataFrame({'Id': [Id], 'Name': [name]})
+        df = pd.concat([df, new_row], ignore_index=True)
+    
+    # Save the updated DataFrame back to CSV
+    df.to_csv(csv_file, index=False)
 
 def capture_images(Id, name):
     if(is_number(Id) and name.isalpha()):
@@ -46,26 +63,36 @@ def capture_images(Id, name):
                 break
         cam.release()
         cv2.destroyAllWindows() 
+        
+        # Update CSV file
+        update_csv(Id, name)
+        
         res = f"Ảnh đã được lưu với ID : {Id} - Tên : {name} trong thư mục {person_folder}"
-        
-        # Ensure the CSV file exists with correct headers
-        csv_file = 'StudentDetails/StudentDetails.csv'
-        if not os.path.isfile(csv_file):
-            with open(csv_file, 'w', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(['Id', 'Name'])  # Write correct headers
-        
-        # Append the new data
-        with open(csv_file, 'a+', newline='') as csvFile:
-            writer = csv.writer(csvFile)
-            writer.writerow([Id, name])
-        csvFile.close()
         return res
     else:
         if (is_number(Id)):
             return "Enter Alphabetical Name"
         if (name.isalpha()):
             return "Enter Numeric Id"
+
+def delete_images(Id):
+    # Find and delete the folder for the given Id
+    for folder in os.listdir("TrainingImage"):
+        if folder.endswith(f"_{Id}"):
+            folder_path = os.path.join("TrainingImage", folder)
+            for file in os.listdir(folder_path):
+                os.remove(os.path.join(folder_path, file))
+            os.rmdir(folder_path)
+            
+            # Update CSV file
+            csv_file = 'StudentDetails/StudentDetails.csv'
+            df = pd.read_csv(csv_file)
+            df = df[df['Id'] != int(Id)]
+            df.to_csv(csv_file, index=False)
+            
+            return f"Đã xóa ảnh và thông tin của ID: {Id}"
+    
+    return f"Không tìm thấy ảnh cho ID: {Id}"
 
 if __name__ == "__main__":
     Id = input("Enter ID: ")
