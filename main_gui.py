@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 import cv2
 import os
 import csv
@@ -10,7 +10,7 @@ import datetime
 import time
 
 # Import functions from other files
-from capture_images import capture_images
+from capture_images import capture_images, delete_images
 from train_model import train_model
 from recognize_faces import recognize_faces
 
@@ -18,95 +18,122 @@ class FaceRecognitionApp:
     def __init__(self, window):
         self.window = window
         self.window.title("Hệ thống nhận diện khuôn mặt")
-        self.window.geometry('1600x900')
-        self.window.configure(background='DarkGrey')
+        self.window.geometry('1200x800')
+        self.window.configure(background='#f0f0f0')
 
-        self.message = tk.Label(window, text="Hệ thống nhận diện khuôn mặt", bg="dark slate gray", fg="white", width=70, height=3, font=('times', 30,))
-        self.message.place(x=200, y=20)
+        self.style = ttk.Style()
+        self.style.theme_use('clam')
+        
+        # Increase font size for all widgets
+        self.style.configure('.', font=('Helvetica', 14))
+        
+        self.create_widgets()
 
-        self.lbl = tk.Label(window, text="Nhập ID", width=20, height=2, fg="white", bg="gray25", font=('times', 15, ' bold '))
-        self.lbl.place(x=350, y=200)
+    def create_widgets(self):
+        # Header
+        header_frame = ttk.Frame(self.window, padding="10", relief="raised", borderwidth=2)
+        header_frame.pack(fill=tk.X, padx=20, pady=20)
 
-        self.txt = tk.Entry(window, width=35,  font=('times', 15, ' bold '))
-        self.txt.place(x=650, y=210)
+        title_label = ttk.Label(header_frame, text="Hệ thống nhận diện khuôn mặt", 
+                  font=('Helvetica', 35, 'bold'))
+        title_label.pack(pady=10)
+        
+        # Add a separator
+        ttk.Separator(self.window, orient='horizontal').pack(fill=tk.X, padx=20)
 
-        self.lbl2 = tk.Label(window, text="Nhập tên", width=20, fg="white", bg="gray25", height=2, font=('times', 15, ' bold '))
-        self.lbl2.place(x=350, y=300)
+        # Main content
+        content_frame = ttk.Frame(self.window, padding="20")
+        content_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.txt2 = tk.Entry(window, width=35,  font=('times', 15, ' bold '))
-        self.txt2.place(x=650, y=315)
+        # Left column
+        left_frame = ttk.Frame(content_frame)
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
 
-        self.lbl3 = tk.Label(window, text="Thông báo : ", width=20, fg="white", bg="gray25", height=2, font=('times', 15, ' bold underline '))
-        self.lbl3.place(x=350, y=400)
+        ttk.Label(left_frame, text="Nhập thông tin", 
+                  font=('Helvetica', 20, 'bold')).pack(pady=(0, 20))
 
-        self.message = tk.Label(window, text="", bg="gray25", fg="white", width=35, height=2, font=('times', 15, ' bold '))
-        self.message.place(x=650, y=400)
+        input_frame = ttk.Frame(left_frame, relief="raised", borderwidth=2)
+        input_frame.pack(fill=tk.X, pady=10, padx=5)
 
-        self.lbl3 = tk.Label(window, text="Thông tin điểm danh : ", width=20, fg="white", bg="gray25", height=2, font=('times', 15, ' bold  underline'))
-        self.lbl3.place(x=350, y=650)
+        ttk.Label(input_frame, text="ID:", font=('Helvetica', 16)).grid(row=0, column=0, sticky=tk.W, pady=10, padx=10)
+        self.id_entry = ttk.Entry(input_frame, width=30, font=('Helvetica', 14))
+        self.id_entry.grid(row=0, column=1, pady=10, ipady=5, padx=10)
 
-        self.message2 = tk.Label(window, text="", fg="white", bg="gray25", width=35, height=2, font=('times', 15, ' bold '))
-        self.message2.place(x=650, y=650)
+        ttk.Label(input_frame, text="Tên:", font=('Helvetica', 16)).grid(row=1, column=0, sticky=tk.W, pady=10, padx=10)
+        self.name_entry = ttk.Entry(input_frame, width=30, font=('Helvetica', 14))
+        self.name_entry.grid(row=1, column=1, pady=10, ipady=5, padx=10)
 
         # Buttons
-        self.clearButton = tk.Button(window, text="Xóa", command=self.clear, fg="steel blue", bg="OliveDrab1", width=20, height=1, activebackground="white", font=('times', 15, ' bold '))
-        self.clearButton.place(x=1000, y=215)
+        button_frame = ttk.Frame(left_frame)
+        button_frame.pack(fill=tk.X, pady=20)
 
-        self.clearButton2 = tk.Button(window, text="Xóa", command=self.clear2, fg="steel blue", bg="OliveDrab1", width=20, height=1, activebackground="white", font=('times', 15, ' bold '))
-        self.clearButton2.place(x=1000, y=312)
+        button_style = ttk.Style()
+        button_style.configure('TButton', font=('Helvetica', 14), padding=10)
 
-        self.takeImg = tk.Button(window, text="Chụp ảnh", command=self.TakeImages, fg="steel blue", bg="OliveDrab1", width=20, height=2, activebackground="white", font=('times', 15, ' bold '))
-        self.takeImg.place(x=50, y=550)
+        ttk.Button(button_frame, text="Chụp ảnh", command=self.take_images).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        ttk.Button(button_frame, text="Train ảnh", command=self.train_images).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        ttk.Button(button_frame, text="Nhận diện", command=self.recognize_faces).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        ttk.Button(button_frame, text="Xóa ảnh", command=self.delete_images).pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
 
-        self.trainImg = tk.Button(window, text="Train ảnh", command=self.TrainImages, fg="steel blue", bg="OliveDrab1", width=20, height=2, activebackground="white", font=('times', 15, ' bold '))
-        self.trainImg.place(x=350, y=550)
+        # Messages
+        ttk.Label(left_frame, text="Thông báo", 
+                  font=('Helvetica', 18, 'bold')).pack(pady=(20, 10))
         
+        message_frame = ttk.Frame(left_frame, relief="sunken", borderwidth=2)
+        message_frame.pack(fill=tk.X, pady=10, padx=5)
+        
+        self.message_var = tk.StringVar()
+        ttk.Label(message_frame, textvariable=self.message_var, 
+                  font=('Helvetica', 14), wraplength=400, padding=10).pack(pady=10)
 
-        self.trackImg = tk.Button(window, text="Nhận diện", command=self.TrackImages, fg="steel blue", bg="OliveDrab1", width=20, height=2, activebackground="white", font=('times', 15, ' bold '))
-        self.trackImg.place(x=650, y=550)
+        # Right column
+        right_frame = ttk.Frame(content_frame)
+        right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False)
 
-        self.deleteImg = tk.Button(window, text="Xóa ảnh", command=self.DeleteImages, fg="steel blue", bg="OliveDrab1", width=20, height=2, activebackground="white", font=('times', 15, ' bold '))
-        self.deleteImg.place(x=950, y=550)
+        ttk.Label(right_frame, text="Kết quả nhận diện", 
+                    font=('Helvetica', 20, 'bold')).pack(pady=(0, 10))
 
-        self.quitWindow = tk.Button(window, text="Thoát", command=self.window.destroy, fg="steel blue", bg="OliveDrab1", width=20, height=2, activebackground="white", font=('times', 15, ' bold '))
-        self.quitWindow.place(x=1230, y=550)
+        result_frame = ttk.Frame(right_frame, relief="sunken", borderwidth=2)
+        result_frame.pack(pady=10, padx=5, fill=tk.BOTH, expand=False)
 
+        self.result_text = tk.Text(result_frame, height=10, width=40, font=('Helvetica', 14))
+        self.result_text.pack(pady=10, padx=10, fill=tk.BOTH, expand=True)
 
-    def clear(self):
-        self.txt.delete(0, 'end')
-        res = ""
-        self.message.configure(text=res)
+        # Footer
+        footer_frame = ttk.Frame(self.window)
+        footer_frame.pack(fill=tk.X, side=tk.BOTTOM, pady=20)
 
-    def clear2(self):
-        self.txt2.delete(0, 'end')
-        res = ""
-        self.message.configure(text=res)
-    
-    def DeleteImages(self):
-        Id = self.txt.get()
-        from capture_images import delete_images
-        res = delete_images(Id)
-        self.message.configure(text=res)
+        ttk.Button(footer_frame, text="Thoát", command=self.window.destroy, style='TButton').pack(side=tk.RIGHT, padx=20)
 
-    def TakeImages(self):
-        Id = self.txt.get()
-        name = self.txt2.get()
-        res = capture_images(Id, name)
-        self.message.configure(text=res)
+    def take_images(self):
+        id = self.id_entry.get()
+        name = self.name_entry.get()
+        if id and name:
+            res = capture_images(id, name)
+            self.message_var.set(res)
+        else:
+            self.message_var.set("Vui lòng nhập ID và tên")
 
-    def TrainImages(self):
+    def train_images(self):
         res = train_model()
-        self.message.configure(text=res)
+        self.message_var.set(res)
 
-    def TrackImages(self):
+    def recognize_faces(self):
         try:
             res = recognize_faces()
-            self.message2.configure(text=str(res))
+            self.result_text.delete('1.0', tk.END)
+            self.result_text.insert(tk.END, str(res))
         except Exception as e:
-            self.message2.configure(text=f"Error: {str(e)}")
-            
+            self.result_text.delete('1.0', tk.END)
+            self.result_text.insert(tk.END, f"Lỗi: {str(e)}")
 
-
+    def delete_images(self):
+        id = self.id_entry.get()
+        if id:
+            res = delete_images(id)
+            self.message_var.set(res)
+        else:
+            self.message_var.set("Vui lòng nhập ID để xóa ảnh")
 
 if __name__ == "__main__":
     root = tk.Tk()
