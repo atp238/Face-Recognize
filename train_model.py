@@ -17,7 +17,8 @@ def getImagesAndLabels(path):
             pilImage = Image.open(imagePath).convert('L')
             imageNp = np.array(pilImage, 'uint8')
             Id = int(os.path.split(imagePath)[-1].split(".")[1])
-            faces.append(imageNp)
+            #addlist
+            faces.append(imageNp) 
             Ids.append(Id)
         except Exception as e:
             print(f"Error processing {imagePath}: {str(e)}")
@@ -26,7 +27,7 @@ def getImagesAndLabels(path):
 def train_model():
     recognizer = cv2.face.LBPHFaceRecognizer_create()
     harcascadePath = "haarcascade_frontalface_default.xml"
-    detector = cv2.CascadeClassifier(harcascadePath)
+    detector = cv2.CascadeClassifier(harcascadePath) #ph
     faces, Id = getImagesAndLabels("TrainingImage")
     recognizer.train(faces, np.array(Id))
     recognizer.save("TrainingImageLabel/Trainner.yml")
