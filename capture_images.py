@@ -1,6 +1,5 @@
 import cv2
 import os
-import csv
 import unicodedata
 import pandas as pd
 
